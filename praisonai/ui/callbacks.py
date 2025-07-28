@@ -6,27 +6,27 @@ logger = logging.getLogger(__name__)
 
 class CallbackManager:
     """Manages callbacks for the PraisonAI UI"""
-    
+
     def __init__(self):
         self._callbacks: Dict[str, Dict[str, Union[Callable, bool]]] = {}
-    
+
     def register(self, name: str, callback: Callable, is_async: bool = False) -> None:
         """Register a callback function"""
         self._callbacks[name] = {
             'func': callback,
             'is_async': is_async
         }
-    
+
     async def call(self, name: str, **kwargs) -> None:
         """Call a registered callback"""
         if name not in self._callbacks:
             logger.warning(f"No callback registered for {name}")
             return
-            
+
         callback_info = self._callbacks[name]
         func = callback_info['func']
         is_async = callback_info['is_async']
-        
+
         try:
             if is_async:
                 await func(**kwargs)
@@ -54,4 +54,4 @@ def callback(name: str, is_async: bool = False):
     def decorator(func):
         register_callback(name, func, is_async)
         return func
-    return decorator 
+    return decorator

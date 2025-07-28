@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This script finetunes a vision language model using Unsloth's fast training framework.
-It supports vision tasks by converting raw image-caption samples into a conversation format, 
+It supports vision tasks by converting raw image-caption samples into a conversation format,
 adding vision-specific LoRA adapters, and training using TRL's SFTTrainer with UnslothVisionDataCollator.
 """
 
@@ -65,21 +65,21 @@ class TrainVisionModel:
             use_gradient_checkpointing="unsloth"
         )
         print("DEBUG: Vision model and original tokenizer loaded.")
-        
+
         # Use the full processor that supports image inputs.
         self.hf_tokenizer = original_tokenizer
-        
+
         # Set pad token if needed
         if not hasattr(self.hf_tokenizer, 'pad_token') or self.hf_tokenizer.pad_token is None:
             if hasattr(self.hf_tokenizer, 'eos_token'):
                 self.hf_tokenizer.pad_token = self.hf_tokenizer.eos_token
             elif hasattr(self.hf_tokenizer, 'bos_token'):
                 self.hf_tokenizer.pad_token = self.hf_tokenizer.bos_token
-        
+
         # Set max length
         if hasattr(self.hf_tokenizer, 'model_max_length'):
             self.hf_tokenizer.model_max_length = self.config.get("max_seq_length", 2048)
-        
+
         # Add vision-specific LoRA adapters
         self.model = FastVisionModel.get_peft_model(
             self.model,
@@ -98,7 +98,7 @@ class TrainVisionModel:
         print("DEBUG: Vision LoRA adapters added.")
 
     def convert_sample(self, sample):
-        
+
         instruction = self.config.get(
             "vision_instruction",
             "You are an expert radiographer. Describe accurately what you see in this image."
@@ -118,7 +118,7 @@ class TrainVisionModel:
                 ]
             },
         ]
-        
+
         return {"messages": conversation}
 
     def load_datasets(self):
@@ -126,31 +126,31 @@ class TrainVisionModel:
         for dataset_info in self.config["dataset"]:
             print("\nDEBUG: Loading vision dataset:", dataset_info)
             ds = load_dataset(
-                dataset_info["name"], 
+                dataset_info["name"],
                 split=dataset_info.get("split_type", "train")
             )
             print("DEBUG: Dataset size:", len(ds))
             print("DEBUG: First raw sample:", ds[0])
             print("DEBUG: Dataset features:", ds.features)
-            
+
             print("\nDEBUG: Converting dataset to vision conversation format...")
             converted_ds = [self.convert_sample(sample) for sample in ds]
-            
+
             # Debug first converted sample
             print("\nDEBUG: First converted sample structure:")
             first = converted_ds[0]
             print("DEBUG: Message keys:", first["messages"][0]["content"][1].keys())
             print("DEBUG: Image type in converted:", type(first["messages"][0]["content"][1].get("image")))
-            
+
             all_converted.extend(converted_ds)
-        
+
         print("\nDEBUG: Combined vision dataset has", len(all_converted), "examples.")
         return all_converted
 
     def train_model(self):
         print("DEBUG: Starting vision training...")
         raw_dataset = self.load_datasets()
-        
+
         # Build training arguments using TrainingArguments
         training_args = TrainingArguments(
             per_device_train_batch_size=self.config.get("per_device_train_batch_size", 1),
@@ -172,7 +172,7 @@ class TrainVisionModel:
             gradient_checkpointing=True,
             max_grad_norm=1.0,
         )
-        
+
         trainer = SFTTrainer(
             model=self.model,
             tokenizer=self.hf_tokenizer,
@@ -242,7 +242,7 @@ class TrainVisionModel:
 
     def prepare_modelfile_content(self):
         output_model = self.config["hf_model_name"]
-        
+
         template = '''{{- range $index, $_ := .Messages }}<|start_header_id|>{{ .Role }}<|end_header_id|>
 
 {{ .Content }}
@@ -251,7 +251,7 @@ class TrainVisionModel:
 
 {{ end }}
 {{- end }}'''
-        
+
         return f"""FROM {output_model}
 TEMPLATE {template}
 PARAMETER temperature 0.6
@@ -303,4 +303,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

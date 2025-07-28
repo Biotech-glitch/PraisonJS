@@ -59,7 +59,7 @@ class CloudDeployer:
             file.write("RUN pip install flask praisonai==2.2.33 gunicorn markdown\n")
             file.write("EXPOSE 8080\n")
             file.write('CMD ["gunicorn", "-b", "0.0.0.0:8080", "api:app"]\n')
-            
+
     def create_api_file(self):
         """
         Creates an API file for the application.
@@ -87,7 +87,7 @@ class CloudDeployer:
             file.write("    return f'<html><body>{html_output}</body></html>'\n\n")
             file.write("if __name__ == \"__main__\":\n")
             file.write("    app.run(debug=True)\n")
-    
+
     def set_environment_variables(self):
         """Sets environment variables with fallback to .env values or defaults."""
         os.environ["OPENAI_MODEL_NAME"] = os.getenv("OPENAI_MODEL_NAME", "gpt-4o")

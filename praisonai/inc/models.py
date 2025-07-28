@@ -73,23 +73,23 @@ class PraisonAIModel:
             self.api_key_var = "OPENROUTER_API_KEY"
             self.base_url = base_url or "https://openrouter.ai/api/v1"
             self.model_name = self.model.replace("openrouter/", "")
-        else: 
-            self.api_key_var = api_key_var or "OPENAI_API_KEY" 
+        else:
+            self.api_key_var = api_key_var or "OPENAI_API_KEY"
             self.base_url = base_url or os.environ.get("OPENAI_API_BASE") or os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"
             self.model_name = self.model
         logger.debug(f"Initialized PraisonAIModel with model {self.model_name}, api_key_var {self.api_key_var}, and base_url {self.base_url}")
 
         # Get API key from environment
         self.api_key = api_key or os.environ.get(self.api_key_var)
-        
+
         # For local servers, allow placeholder API key if base_url is set to non-OpenAI endpoint
         if not self.api_key and self.base_url:
             parsed_url = urlparse(self.base_url)
-            is_local = (parsed_url.hostname in ["localhost", "127.0.0.1"] or 
+            is_local = (parsed_url.hostname in ["localhost", "127.0.0.1"] or
                        "api.openai.com" not in self.base_url)
             if is_local:
                 self.api_key = LOCAL_SERVER_API_KEY_PLACEHOLDER
-        
+
         if not self.api_key:
             raise ValueError(
                 f"{self.api_key_var} environment variable is required for the default OpenAI service. "

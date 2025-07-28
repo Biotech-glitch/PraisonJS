@@ -13,4 +13,4 @@ setup(
     cmdclass={
         'install': PostInstallCommand,
     }
-) 
+)

@@ -53,8 +53,8 @@ def load_tools_from_tools_py():
 
         # Get all module attributes except private ones and classes
         for name, obj in inspect.getmembers(module):
-            if (not name.startswith('_') and 
-                callable(obj) and 
+            if (not name.startswith('_') and
+                callable(obj) and
                 not inspect.isclass(obj)):
                 # Add the function to global namespace
                 globals()[name] = obj
@@ -82,10 +82,10 @@ def load_tools_from_tools_py():
 
         logger.info(f"Loaded {len(tools_list)} tool functions from tools.py")
         logger.info(f"Tools list: {tools_list}")
-        
+
     except Exception as e:
         logger.warning(f"Error loading tools from tools.py: {e}")
-        
+
     return tools_list
 
 async def step_callback(step_details):
@@ -99,7 +99,7 @@ async def step_callback(step_details):
                 "author": step_details.get("agent_name", "Agent")
             })
             logger.info("[CALLBACK DEBUG] Queued agent response message")
-        
+
         # Queue message for tool usage
         if step_details.get("tool_name"):
             message_queue.put({
@@ -107,7 +107,7 @@ async def step_callback(step_details):
                 "author": "System"
             })
             logger.info("[CALLBACK DEBUG] Queued tool usage message")
-            
+
     except Exception as e:
         logger.error(f"[CALLBACK DEBUG] Error in step callback: {str(e)}", exc_info=True)
 
@@ -122,14 +122,14 @@ async def task_callback(task_output):
             content = task_output.content
         else:
             content = str(task_output)
-            
+
         # Queue the message
         message_queue.put({
             "content": f"Task Output: {content}",
             "author": "Task"
         })
         logger.info("[CALLBACK DEBUG] Queued task completion message")
-        
+
     except Exception as e:
         logger.error(f"[CALLBACK DEBUG] Error in task callback: {str(e)}", exc_info=True)
 
@@ -207,7 +207,7 @@ async def task_callback_wrapper(task_output):
         else:
             content = str(task_output)
             logger.info("[CALLBACK DEBUG] Using string representation of output")
-            
+
         logger.info(f"[CALLBACK DEBUG] Sending task completion message from wrapper: {content[:100]}...")
         try:
             await cl.Message(
@@ -251,7 +251,7 @@ def sync_task_callback_wrapper(task_output):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             logger.info("[CALLBACK DEBUG] Created new event loop")
-        
+
         if loop.is_running():
             # If loop is running, schedule the callback
             logger.info("[CALLBACK DEBUG] Loop is running, scheduling callback")
@@ -263,7 +263,7 @@ def sync_task_callback_wrapper(task_output):
             # If loop is not running, run it directly
             logger.info("[CALLBACK DEBUG] Loop is not running, running callback directly")
             loop.run_until_complete(task_callback_wrapper(task_output))
-            
+
     except Exception as e:
         logger.error(f"[CALLBACK DEBUG] Error in sync task callback: {str(e)}", exc_info=True)
 
@@ -278,7 +278,7 @@ def sync_step_callback_wrapper(step_details):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             logger.info("[CALLBACK DEBUG] Created new event loop")
-        
+
         if loop.is_running():
             # If loop is running, schedule the callback
             logger.info("[CALLBACK DEBUG] Loop is running, scheduling callback")
@@ -290,7 +290,7 @@ def sync_step_callback_wrapper(step_details):
             # If loop is not running, run it directly
             logger.info("[CALLBACK DEBUG] Loop is not running, running callback directly")
             loop.run_until_complete(step_callback_wrapper(step_details))
-            
+
     except Exception as e:
         logger.error(f"[CALLBACK DEBUG] Error in sync step callback: {str(e)}", exc_info=True)
 
@@ -305,7 +305,7 @@ async def ui_run_praisonai(config, topic, tools_dict):
     try:
         # Start message queue processor
         queue_processor = asyncio.create_task(process_message_queue())
-        
+
         # Create agents for each role
         for role, details in config['roles'].items():
             # Format the role name and other details
@@ -326,10 +326,10 @@ async def ui_run_praisonai(config, topic, tools_dict):
                     # Create a new event loop for this thread
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                    
+
                     # Add agent name to step details
                     step_details["agent_name"] = role_name
-                    
+
                     # Run the callback
                     loop.run_until_complete(step_callback(step_details))
                     loop.close()
@@ -356,7 +356,7 @@ async def ui_run_praisonai(config, topic, tools_dict):
         for role, details in config['roles'].items():
             agent = agents[role]
             tools_list = []
-            
+
             # Get tools for this role
             for tool_name in details.get('tools', []):
                 if tool_name in tools_dict:
@@ -380,7 +380,7 @@ async def ui_run_praisonai(config, topic, tools_dict):
                         # Create a new event loop for this thread
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
-                        
+
                         # Run the callback
                         loop.run_until_complete(task_callback(task_output))
                         loop.close()
@@ -409,7 +409,7 @@ async def ui_run_praisonai(config, topic, tools_dict):
         for role, details in config['roles'].items():
             for task_name, task_details in details.get('tasks', {}).items():
                 task = tasks_dict[task_name]
-                context_tasks = [tasks_dict[ctx] for ctx in task_details.get('context', []) 
+                context_tasks = [tasks_dict[ctx] for ctx in task_details.get('context', [])
                             if ctx in tasks_dict]
                 task.context = context_tasks
 
@@ -441,9 +441,9 @@ async def ui_run_praisonai(config, topic, tools_dict):
         # Run the agents in a separate thread
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(None, crew.start)
-        
+
         logger.debug(f"[CALLBACK DEBUG] Result: {response}")
-        
+
         # Convert response to string if it's not already
         if hasattr(response, 'raw'):
             result = response.raw
@@ -451,19 +451,19 @@ async def ui_run_praisonai(config, topic, tools_dict):
             result = response.content
         else:
             result = str(response)
-        
+
         # Send the completion message
         await cl.Message(
             content="PraisonAI agents execution completed.",
             author="System"
         ).send()
-        
+
         # After getting the response, wait a bit for remaining messages
         await asyncio.sleep(1)  # Give time for final messages to be processed
         queue_processor.cancel()  # Stop the queue processor
-        
+
         return result
-        
+
     except Exception as e:
         error_msg = f"Error in ui_run_praisonai: {str(e)}"
         logger.error(error_msg, exc_info=True)

@@ -60,7 +60,7 @@ async def query_stock_price_handler(symbol, period):
         if hist.empty:
             return {"error": "No data found for the given symbol."}
         return hist.to_json()
- 
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -154,12 +154,12 @@ async def fallback_to_duckduckgo(query):
     try:
         with DDGS() as ddgs:
             ddg_results = list(ddgs.text(query, max_results=5))
-        
+
         logger.debug(f"DuckDuckGo search results: {ddg_results}")
-        
+
         async with AsyncWebCrawler() as crawler:
             results = []
-            
+
             for result in ddg_results:
                 url = result.get('href')
                 if url:
@@ -184,7 +184,7 @@ async def fallback_to_duckduckgo(query):
                         "url": "N/A",
                         "full_content": "No URL provided for crawling"
                     })
-        
+
         return results
     except Exception as e:
         logger.error(f"Error in DuckDuckGo search: {str(e)}")

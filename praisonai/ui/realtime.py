@@ -254,15 +254,15 @@ async def start():
 async def on_message(message: cl.Message):
     openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
     message_history = cl.user_session.get("message_history", [])
-    
+
     if openai_realtime and openai_realtime.is_connected():
         current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         prompt = f"Current time Just for reference: {current_date}\n\n{message.content}"
-        
+
         # Add user message to history
         message_history.append({"role": "user", "content": prompt})
         cl.user_session.set("message_history", message_history)
-        
+
         await openai_realtime.send_user_message_content([{ "type": 'input_text', "text": message.content }])
     else:
         await cl.Message(content="Please activate voice mode before sending messages!").send()
@@ -296,7 +296,7 @@ async def setup_openai_realtime():
             item = event.get("item")
             logger.debug(f"Item completed: {json.dumps(item, indent=2, default=str)}")
             await openai_realtime._send_chainlit_message(item)
-            
+
             # Add assistant message to history
             message_history = cl.user_session.get("message_history", [])
             content = item.get("formatted", {}).get("text", "") or item.get("formatted", {}).get("transcript", "")
@@ -325,7 +325,7 @@ async def setup_openai_realtime():
     openai_realtime.on('error', handle_error)
 
     cl.user_session.set("openai_realtime", openai_realtime)
-    
+
     # Filter out invalid tools and add valid ones
     valid_tools = []
     for tool_def, tool_handler in tools:
@@ -336,7 +336,7 @@ async def setup_openai_realtime():
                 logger.warning(f"Skipping invalid tool definition: {tool_def}")
         except Exception as e:
             logger.warning(f"Error processing tool: {e}")
-    
+
     if valid_tools:
         coros = [openai_realtime.add_tool(tool_def, tool_handler) for tool_def, tool_handler in valid_tools]
         await asyncio.gather(*coros)
@@ -349,10 +349,10 @@ async def setup_agent(settings):
     cl.user_session.set("settings", settings)
     model_name = settings["model_name"]
     cl.user_session.set("model_name", model_name)
-    
+
     # Save in settings table
     save_setting("model_name", model_name)
-    
+
     # Save in thread metadata
     thread_id = cl.user_session.get("thread_id")
     if thread_id:
@@ -364,12 +364,12 @@ async def setup_agent(settings):
                     metadata = json.loads(metadata)
                 except json.JSONDecodeError:
                     metadata = {}
-            
+
             metadata["model_name"] = model_name
-            
+
             # Always store metadata as a dictionary
             await cl_data._data_layer.update_thread(thread_id, metadata=metadata)
-            
+
             # Update the user session with the new metadata
             cl.user_session.set("metadata", metadata)
 
@@ -380,11 +380,11 @@ async def on_audio_start():
         if not openai_realtime:
             await setup_openai_realtime()
             openai_realtime = cl.user_session.get("openai_realtime")
-        
+
         if not openai_realtime.is_connected():
             model_name = cl.user_session.get("model_name") or os.getenv("OPENAI_MODEL_NAME") or os.getenv("MODEL_NAME", "gpt-4o-mini-realtime-preview-2024-12-17")
             await openai_realtime.connect(model_name)
-            
+
         logger.info("Connected to OpenAI realtime")
         return True
     except Exception as e:
@@ -396,11 +396,11 @@ async def on_audio_start():
 @cl.on_audio_chunk
 async def on_audio_chunk(chunk: cl.InputAudioChunk):
     openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
-    
+
     if not openai_realtime:
         logger.debug("No realtime client available")
         return
-        
+
     if openai_realtime.is_connected():
         try:
             success = await openai_realtime.append_input_audio(chunk.data)
@@ -450,7 +450,7 @@ async def on_chat_resume(thread: ThreadDict):
     await settings.send()
     thread_id = thread["id"]
     cl.user_session.set("thread_id", thread["id"])
-    
+
     # Ensure metadata is a dictionary
     metadata = thread.get("metadata", {})
     if isinstance(metadata, str):
@@ -458,9 +458,9 @@ async def on_chat_resume(thread: ThreadDict):
             metadata = json.loads(metadata)
         except json.JSONDecodeError:
             metadata = {}
-    
+
     cl.user_session.set("metadata", metadata)
-    
+
     message_history = []
     steps = thread["steps"]
 
@@ -485,4 +485,3 @@ async def on_chat_resume(thread: ThreadDict):
     # Reconnect to OpenAI realtime
     await setup_openai_realtime()
 
-    

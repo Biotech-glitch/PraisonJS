@@ -52,7 +52,7 @@ class ContextGatherer:
             if os.path.exists(filepath):
                 with open(filepath, 'r') as f:
                     ignore_patterns.extend(
-                        line.strip() for line in f 
+                        line.strip() for line in f
                         if line.strip() and not line.startswith('#')
                     )
 
@@ -79,11 +79,11 @@ class ContextGatherer:
         if not ignore_patterns:
             ignore_patterns = [
                 ".*", "*.pyc", "__pycache__", ".git", ".gitignore", ".vscode",
-                ".idea", ".DS_Store", "*.lock", "*.pyc", ".env", "docs", "tests", 
+                ".idea", ".DS_Store", "*.lock", "*.pyc", ".env", "docs", "tests",
                 "test", "tmp", "temp", "*.txt", "*.md", "*.json", "*.csv", "*.tsv",
-                "public", "*.sql", "*.sqlite", "*.db", "*.db3", "*.sqlite3", 
-                "*.log", "*.zip", "*.gz", "*.tar", "*.rar", "*.7z", "*.pdf", 
-                "*.jpg", "*.jpeg", "*.png", "*.gif", "*.svg", "cookbooks", 
+                "public", "*.sql", "*.sqlite", "*.db", "*.db3", "*.sqlite3",
+                "*.log", "*.zip", "*.gz", "*.tar", "*.rar", "*.7z", "*.pdf",
+                "*.jpg", "*.jpeg", "*.png", "*.gif", "*.svg", "cookbooks",
                 "assets", "__pycache__", "dist", "build", "node_modules", "venv"
             ]
             logger.debug(f"Using default ignore patterns: {ignore_patterns}")
@@ -105,7 +105,7 @@ class ContextGatherer:
         """
         include_paths = []
         include_all = False  # Flag to indicate if we need to include all files
- 
+
         include_file = os.path.join(self.directory, '.praisoncontext')
         if os.path.exists(include_file):
             with open(include_file, 'r') as f:
@@ -113,10 +113,10 @@ class ContextGatherer:
                     line.strip() for line in f
                     if line.strip() and not line.startswith('#')
                 )
- 
+
         # If .praisoncontext doesn't exist, fall back to .praisoninclude
         # for including all relevant files
-        if not include_paths: 
+        if not include_paths:
             include_file = os.path.join(self.directory, '.praisoninclude')
             if os.path.exists(include_file):
                 with open(include_file, 'r') as f:
@@ -125,7 +125,7 @@ class ContextGatherer:
                         if line.strip() and not line.startswith('#')
                     )
                 include_all = True  # Include all files along with specified paths
- 
+
         return include_paths, include_all
 
     def should_ignore(self, file_path):
@@ -205,7 +205,7 @@ class ContextGatherer:
         if include_all:
             # Include ALL relevant files from the entire directory
             process_path(self.directory)
-            
+
             # Include files from .praisoninclude specifically
             for include_path in self.include_paths:
                 full_path = os.path.join(self.directory, include_path)

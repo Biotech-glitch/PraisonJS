@@ -65,17 +65,17 @@ if not PRAISONAI_AGENTS_AVAILABLE:
 async def claude_code_tool(query: str) -> str:
     """
     Execute Claude Code CLI commands for file modifications and coding tasks.
-    
+
     Args:
         query: The user's request that requires file modifications or coding assistance
-        
+
     Returns:
         The output from Claude Code execution
     """
     try:
         # Check if the current working directory is a git repository
         repo_path = os.environ.get("PRAISONAI_CODE_REPO_PATH", ".")
-        
+
         # Try to detect if git is available and if we're in a git repo
         git_available = False
         try:
@@ -83,15 +83,15 @@ async def claude_code_tool(query: str) -> str:
             git_available = True
         except (subprocess.CalledProcessError, FileNotFoundError):
             git_available = False
-        
+
         # Build Claude Code command
         claude_cmd = ["claude", "--dangerously-skip-permissions", "-p", query]
-        
+
         # Check if it's a continuation (simple heuristic)
         user_session_context = cl.user_session.get("claude_code_context", False)
         if user_session_context:
             claude_cmd.insert(1, "--continue")
-        
+
         # Execute Claude Code command
         result = subprocess.run(
             claude_cmd,
@@ -100,14 +100,14 @@ async def claude_code_tool(query: str) -> str:
             text=True,
             timeout=300  # 5 minutes timeout
         )
-        
+
         # Set context for future requests
         cl.user_session.set("claude_code_context", True)
-        
+
         output = result.stdout
         if result.stderr:
             output += f"\n\nErrors:\n{result.stderr}"
-        
+
         # If git is available and changes were made, try to create a branch and PR
         if git_available and result.returncode == 0:
             try:
@@ -119,15 +119,15 @@ async def claude_code_tool(query: str) -> str:
                     text=True,
                     check=True
                 )
-                
+
                 if git_status.stdout.strip():
                     # Create a branch for the changes
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     branch_name = f"claude-code-{timestamp}"
-                    
+
                     # Create and switch to new branch
                     subprocess.run(["git", "checkout", "-b", branch_name], cwd=repo_path, check=True)
-                    
+
                     # Add and commit changes
                     subprocess.run(["git", "add", "."], cwd=repo_path, check=True)
                     commit_message = f"Claude Code changes: {query[:50]}..."
@@ -136,7 +136,7 @@ async def claude_code_tool(query: str) -> str:
                         cwd=repo_path,
                         check=True
                     )
-                    
+
                     # Push to remote (if configured)
                     try:
                         subprocess.run(
@@ -144,7 +144,7 @@ async def claude_code_tool(query: str) -> str:
                             cwd=repo_path,
                             check=True
                         )
-                        
+
                         # Generate PR URL (assuming GitHub)
                         remote_url = subprocess.run(
                             ["git", "config", "--get", "remote.origin.url"],
@@ -152,7 +152,7 @@ async def claude_code_tool(query: str) -> str:
                             capture_output=True,
                             text=True
                         )
-                        
+
                         if remote_url.returncode == 0:
                             repo_url = remote_url.stdout.strip()
                             if repo_url.endswith(".git"):
@@ -160,15 +160,15 @@ async def claude_code_tool(query: str) -> str:
                             if "github.com" in repo_url:
                                 pr_url = f"{repo_url}/compare/main...{branch_name}?quick_pull=1"
                                 output += f"\n\n📋 **Pull Request Created:**\n{pr_url}"
-                                
+
                     except subprocess.CalledProcessError:
                         output += f"\n\n🌲 **Branch created:** {branch_name} (push manually if needed)"
-                        
+
             except subprocess.CalledProcessError as e:
                 output += f"\n\nGit operations failed: {e}"
-        
+
         return output
-        
+
     except subprocess.TimeoutExpired:
         return "Claude Code execution timed out after 5 minutes."
     except subprocess.CalledProcessError as e:
@@ -196,15 +196,15 @@ def _build_completion_params(model_name, **override_params):
     params = {
         "model": model_name,
     }
-    
+
     # Override with any provided parameters
     params.update(override_params)
-    
+
     return params
 
 def save_setting(key: str, value: str):
     """Saves a setting to the database.
-    
+
     Args:
         key: The setting key.
         value: The setting value.
@@ -213,10 +213,10 @@ def save_setting(key: str, value: str):
 
 def load_setting(key: str) -> str:
     """Loads a setting from the database.
-    
+
     Args:
         key: The setting key.
-    
+
     Returns:
         The setting value, or None if the key is not found.
     """
@@ -226,7 +226,7 @@ cl_data._data_layer = db_manager
 
 @cl.on_chat_start
 async def start():
-    model_name = load_setting("model_name") 
+    model_name = load_setting("model_name")
 
     if (model_name):
         cl.user_session.set("model_name", model_name)
@@ -235,12 +235,12 @@ async def start():
         model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
         cl.user_session.set("model_name", model_name)
     logger.debug(f"Model name: {model_name}")
-    
+
     # Load Claude Code setting (check CLI flag first, then database setting)
     claude_code_enabled = os.getenv("PRAISONAI_CLAUDECODE_ENABLED", "false").lower() == "true"
     if not claude_code_enabled:
         claude_code_enabled = (load_setting("claude_code_enabled") or "false").lower() == "true"
-    
+
     settings = cl.ChatSettings(
         [
             TextInput(
@@ -274,11 +274,11 @@ async def setup_agent(settings):
     claude_code_enabled = settings.get("claude_code_enabled", False)
     cl.user_session.set("model_name", model_name)
     cl.user_session.set("claude_code_enabled", claude_code_enabled)
-    
+
     # Save in settings table
     save_setting("model_name", model_name)
     save_setting("claude_code_enabled", str(claude_code_enabled).lower())
-    
+
     # Save in thread metadata
     thread_id = cl.user_session.get("thread_id")
     if thread_id:
@@ -290,13 +290,13 @@ async def setup_agent(settings):
                     metadata = json.loads(metadata)
                 except json.JSONDecodeError:
                     metadata = {}
-            
+
             metadata["model_name"] = model_name
             metadata["claude_code_enabled"] = claude_code_enabled
-            
+
             # Always store metadata as a dictionary
             await cl_data._data_layer.update_thread(thread_id, metadata=metadata)
-            
+
             # Update the user session with the new metadata
             cl.user_session.set("metadata", metadata)
 
@@ -311,7 +311,7 @@ async def tavily_web_search(query):
             "query": query,
             "error": "Tavily API key is not set. Web search is unavailable."
         })
-    
+
     response = tavily_client.search(query)
     logger.debug(f"Tavily search response: {response}")
 
@@ -411,18 +411,18 @@ async def handle_with_praisonai_agents(message, user_message, model_name, claude
     try:
         # Prepare tools list
         available_tools = []
-        
+
         # Add Tavily search tool if API key available
         if tavily_api_key:
             available_tools.append(tavily_web_search)
-        
+
         # Add Claude Code tool if enabled
         if claude_code_enabled:
             available_tools.append(claude_code_tool)
-        
+
         # Create agent instructions
         instructions = """You are a helpful AI assistant. Use the available tools when needed to provide comprehensive responses.
-        
+
 If Claude Code tool is available and the user's request involves:
 - File modifications, code changes, or implementation tasks
 - Creating, editing, or debugging code
@@ -440,38 +440,38 @@ For informational questions, explanations, or general conversations, respond nor
             llm=model_name,
             tools=available_tools if available_tools else None
         )
-        
+
         # Execute agent with streaming
         full_response = ""
-        
+
         # Use agent's streaming capabilities if available
         try:
             # For now, use synchronous execution and stream the result
             # TODO: Implement proper streaming when PraisonAI agents support it
             result = agent.start(user_message)
-            
+
             # Stream the response character by character for better UX
             if hasattr(result, 'raw'):
                 response_text = result.raw
             else:
                 response_text = str(result)
-            
+
             for char in response_text:
                 await msg.stream_token(char)
                 full_response += char
                 # Small delay to make streaming visible
                 await asyncio.sleep(0.01)
-            
+
         except Exception as e:
             error_response = f"Error executing agent: {str(e)}"
             for char in error_response:
                 await msg.stream_token(char)
                 full_response += char
                 await asyncio.sleep(0.01)
-        
+
         msg.content = full_response
         await msg.update()
-        
+
     except Exception as e:
         error_msg = f"Failed to use PraisonAI Agents: {str(e)}"
         logger.error(error_msg)
@@ -493,7 +493,7 @@ async def handle_with_litellm(user_message, model_name, message_history, msg, im
         buffered = io.BytesIO()
         image.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
-        
+
         completion_params["messages"][-1] = {
             "role": "user",
             "content": [
@@ -520,12 +520,12 @@ async def handle_with_litellm(user_message, model_name, message_history, msg, im
         logger.debug(f"LLM part: {part}")
         if 'choices' in part and len(part['choices']) > 0:
             delta = part['choices'][0].get('delta', {})
-            
+
             if 'content' in delta and delta['content'] is not None:
                 token = delta['content']
                 await msg.stream_token(token)
                 full_response += token
-            
+
             if tavily_api_key and 'tool_calls' in delta and delta['tool_calls'] is not None:
                 for tool_call in delta['tool_calls']:
                     if current_tool_call is None or tool_call.index != current_tool_call['index']:
@@ -657,7 +657,7 @@ async def on_chat_resume(thread: ThreadDict):
     )
     await settings.send()
     cl.user_session.set("thread_id", thread["id"])
-    
+
     # Ensure metadata is a dictionary
     metadata = thread.get("metadata", {})
     if isinstance(metadata, str):
@@ -665,9 +665,9 @@ async def on_chat_resume(thread: ThreadDict):
             metadata = json.loads(metadata)
         except json.JSONDecodeError:
             metadata = {}
-    
+
     cl.user_session.set("metadata", metadata)
-    
+
     message_history = cl.user_session.get("message_history", [])
     steps = thread["steps"]
 

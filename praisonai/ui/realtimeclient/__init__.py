@@ -45,7 +45,7 @@ def array_buffer_to_base64(array_buffer):
         array_buffer = array_buffer.tobytes()
     else:
         array_buffer = array_buffer.tobytes()
-    
+
     return base64.b64encode(array_buffer).decode('utf-8')
 
 def merge_int16_arrays(left, right):
@@ -67,7 +67,7 @@ class RealtimeEventHandler:
 
     def on(self, event_name, handler):
         self.event_handlers[event_name].append(handler)
-        
+
     def clear_event_handlers(self):
         self.event_handlers = defaultdict(list)
 
@@ -93,7 +93,7 @@ class RealtimeAPI(RealtimeEventHandler):
     def __init__(self, url=None, api_key=None):
         super().__init__()
         self.default_url = 'wss://api.openai.com/v1/realtime'
-        
+
         # Support custom base URL from environment variable
         base_url = os.getenv("OPENAI_BASE_URL")
         if base_url:
@@ -108,7 +108,7 @@ class RealtimeAPI(RealtimeEventHandler):
             self.url = url or ws_url
         else:
             self.url = url or self.default_url
-            
+
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.ws = None
 
@@ -132,12 +132,12 @@ class RealtimeAPI(RealtimeEventHandler):
     async def connect(self, model='gpt-4o-mini-realtime-preview-2024-12-17'):
         if self.is_connected():
             raise Exception("Already connected")
-        
+
         headers = {
             'Authorization': f'Bearer {self.api_key}',
             'OpenAI-Beta': 'realtime=v1'
         }
-        
+
         # Try different header parameter names for compatibility
         try:
             self.ws = await websockets.connect(f"{self.url}?model={model}", additional_headers=headers)
@@ -148,7 +148,7 @@ class RealtimeAPI(RealtimeEventHandler):
             except TypeError:
                 # Last fallback - some versions might not support headers parameter
                 raise Exception("Websockets library version incompatible. Please update websockets to version 11.0 or higher.")
-        
+
         self.log(f"Connected to {self.url}")
         asyncio.create_task(self._receive_messages())
 
@@ -188,7 +188,7 @@ class RealtimeAPI(RealtimeEventHandler):
         self.dispatch(f"client.{event_name}", event)
         self.dispatch("client.*", event)
         self.log("sent:", event)
-        
+
         try:
             await self.ws.send(json.dumps(event))
         except ConnectionClosed as e:
@@ -218,7 +218,7 @@ class RealtimeAPI(RealtimeEventHandler):
 
 class RealtimeConversation:
     default_frequency = config.features.audio.sample_rate
-    
+
     EventProcessors = {
         'conversation.item.created': lambda self, event: self._process_item_created(event),
         'conversation.item.truncated': lambda self, event: self._process_item_truncated(event),
@@ -235,7 +235,7 @@ class RealtimeConversation:
         'response.text.delta': lambda self, event: self._process_text_delta(event),
         'response.function_call_arguments.delta': lambda self, event: self._process_function_call_arguments_delta(event),
     }
-    
+
     def __init__(self):
         self.clear()
 
@@ -463,7 +463,7 @@ class RealtimeClient(RealtimeEventHandler):
         self.conversation = RealtimeConversation()
         self._reset_config()
         self._add_api_event_handlers()
-        
+
     def _reset_config(self):
         self.session_created = False
         self.tools = {}
@@ -573,11 +573,11 @@ class RealtimeClient(RealtimeEventHandler):
     async def connect(self, model=None):
         if self.is_connected():
             raise Exception("Already connected, use .disconnect() first")
-        
+
         # Use provided model, OPENAI_MODEL_NAME environment variable, or default
         if model is None:
             model = os.getenv("OPENAI_MODEL_NAME", 'gpt-4o-mini-realtime-preview-2024-12-17')
-            
+
         await self.realtime.connect(model)
         await self.update_session()
         return True
@@ -635,7 +635,7 @@ class RealtimeClient(RealtimeEventHandler):
         if self.realtime.is_connected():
             await self.realtime.send("session.update", {"session": session})
         return True
-    
+
     async def create_conversation_item(self, item):
         await self.realtime.send("conversation.item.create", {
             "item": item
@@ -661,7 +661,7 @@ class RealtimeClient(RealtimeEventHandler):
         if not self.is_connected():
             logger.warning("Cannot append audio: RealtimeClient is not connected")
             return False
-            
+
         if len(array_buffer) > 0:
             try:
                 await self.realtime.send("input_audio_buffer.append", {
@@ -717,10 +717,10 @@ class RealtimeClient(RealtimeEventHandler):
 
     async def _send_chainlit_message(self, item):
         import chainlit as cl
-        
+
         # Debug logging
         logger.debug(f"Received item structure: {json.dumps({k: type(v).__name__ for k, v in item.items()}, indent=2)}")
-        
+
         if "type" in item and item["type"] == "function_call_output":
             # Don't send function call outputs directly to Chainlit
             logger.debug(f"Function call output received: {item.get('output', '')}")
@@ -738,7 +738,7 @@ class RealtimeClient(RealtimeEventHandler):
         else:
             # Handle items without a 'role' or 'type'
             logger.debug(f"Unhandled item type:\n{json.dumps(item, indent=2)}")
-        
+
         # Additional debug logging
         logger.debug(f"Processed Chainlit message for item: {item.get('id', 'unknown')}")
 

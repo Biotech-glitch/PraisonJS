@@ -27,7 +27,7 @@ def generate_crew_and_kickoff(agent_file):
     with open(agent_file, 'r') as f:
         config = yaml.safe_load(f)
 
-    topic = config['topic']  
+    topic = config['topic']
     framework = config['framework']
 
     agents = {}
@@ -36,7 +36,7 @@ def generate_crew_and_kickoff(agent_file):
         # Load the LLM configuration dynamically
         print(config_list)
         llm_config = {"config_list": config_list}
-        
+
         for role, details in config['roles'].items():
             agent_name = details['role'].format(topic=topic).replace("{topic}", topic)
             agent_goal = details['goal'].format(topic=topic)
@@ -51,7 +51,7 @@ def generate_crew_and_kickoff(agent_file):
             for task_name, task_details in details.get('tasks', {}).items():
                 description_filled = task_details['description'].format(topic=topic)
                 expected_output_filled = task_details['expected_output'].format(topic=topic)
-                
+
                 chat_task = {
                     "recipient": agents[role],
                     "message": description_filled,
@@ -78,7 +78,7 @@ def generate_crew_and_kickoff(agent_file):
             role_filled = details['role'].format(topic=topic)
             goal_filled = details['goal'].format(topic=topic)
             backstory_filled = details['backstory'].format(topic=topic)
-            
+
             # Assume tools are loaded and handled here as per your requirements
             agent = Agent(role=role_filled, goal=goal_filled, backstory=backstory_filled)
             agents[role] = agent

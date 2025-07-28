@@ -151,10 +151,10 @@ async def handle_media_stream(websocket: WebSocket):
                         print(f"Received event: {response['type']}", response)
                     if response['type'] == 'session.updated':
                         print("Session updated successfully:", response)
-                    
+
                     if response['type'] == 'response.done':
                         await handle_response_done(response, openai_ws)
-                    
+
                     if response['type'] == 'response.audio.delta' and response.get('delta'):
                         # Audio from OpenAI
                         try:
@@ -213,7 +213,7 @@ async def call_tool(function_name, arguments):
     tool = next((t for t in tools if t[0]['name'] == function_name), None)
     if not tool:
         return {"error": f"Function {function_name} not found"}
-    
+
     try:
         # Assuming the tool function is the second element in the tuple
         result = await tool[1](**arguments)
@@ -225,13 +225,13 @@ async def send_session_update(openai_ws):
     """Send session update to OpenAI WebSocket."""
     global tools
     print(f"Formatted tools: {tools}")
-    
+
     use_tools = [
         {**tool[0], "type": "function"}
         for tool in tools
         if isinstance(tool, tuple) and len(tool) > 0 and isinstance(tool[0], dict)
     ]
-    
+
     session_update = {
         "type": "session.update",
         "session": {
@@ -265,7 +265,7 @@ def run_server(port: int, use_public: bool = False):
     """Run the FastAPI server using uvicorn."""
     if not OPENAI_API_KEY:
         raise ValueError('Missing the OpenAI API key. Please set it in the .env file or configure it through the GUI.')
-    
+
     if use_public:
         setup_public_url(port)
     else:

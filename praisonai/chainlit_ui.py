@@ -1,6 +1,6 @@
 # praisonai/chainlit_ui.py
-from praisonai.agents_generator import AgentsGenerator 
-from praisonai.auto import AutoGenerator 
+from praisonai.agents_generator import AgentsGenerator
+from praisonai.auto import AutoGenerator
 import chainlit as cl
 import os
 from chainlit.types import ThreadDict
@@ -35,7 +35,7 @@ async def on_run(action):
 @cl.action_callback("modify")
 async def on_modify(action):
     await cl.Message(content="Modify the agents and tools from below settings").send()
-    
+
 
 @cl.set_chat_profiles
 async def set_profiles(current_user: cl.User):
@@ -79,17 +79,17 @@ async def start_chat():
         "message_history",
         [{"role": "system", "content": "You are a helpful assistant."}],
     )
-    
+
     # Create tools.py if it doesn't exist
     if not os.path.exists("tools.py"):
         with open("tools.py", "w") as f:
             f.write("# Add your custom tools here\n")
-    
+
     settings = await cl.ChatSettings(
         [
             TextInput(id="Model", label="OpenAI - Model", initial=config_list[0]['model']),
             TextInput(id="BaseUrl", label="OpenAI - Base URL", initial=config_list[0]['base_url']),
-            TextInput(id="ApiKey", label="OpenAI - API Key", initial=config_list[0]['api_key']), 
+            TextInput(id="ApiKey", label="OpenAI - API Key", initial=config_list[0]['api_key']),
             Select(
                 id="Framework",
                 label="Framework",
@@ -101,7 +101,7 @@ async def start_chat():
     cl.user_session.set("settings", settings)
     chat_profile = cl.user_session.get("chat_profile")
     if chat_profile=="Manual":
-        
+
         agent_file = "agents.yaml"
         full_agent_file_path = os.path.abspath(agent_file)  # Get full path
         if os.path.exists(full_agent_file_path):
@@ -109,8 +109,8 @@ async def start_chat():
                 yaml_content = f.read()
             msg = cl.Message(content=yaml_content, language="yaml")
             await msg.send()
-            
-                
+
+
         full_tools_file_path = os.path.abspath("tools.py")  # Get full path
         if os.path.exists(full_tools_file_path):
             with open(full_tools_file_path, 'r') as f:
@@ -122,7 +122,7 @@ async def start_chat():
             [
                 TextInput(id="Model", label="OpenAI - Model", initial=config_list[0]['model']),
                 TextInput(id="BaseUrl", label="OpenAI - Base URL", initial=config_list[0]['base_url']),
-                TextInput(id="ApiKey", label="OpenAI - API Key", initial=config_list[0]['api_key']), 
+                TextInput(id="ApiKey", label="OpenAI - API Key", initial=config_list[0]['api_key']),
                 Select(
                     id="Framework",
                     label="Framework",
@@ -134,7 +134,7 @@ async def start_chat():
             ]
         ).send()
         cl.user_session.set("settings", settings)
-        
+
         res = await cl.AskActionMessage(
             content="Pick an action!",
             actions=actions,
@@ -145,7 +145,7 @@ async def start_chat():
             await main(cl.Message(content="", actions=actions))
 
     await on_settings_update(settings)
-    
+
 @cl.on_settings_update
 async def on_settings_update(settings):
     """Handle updates to the ChatSettings form."""
@@ -157,14 +157,14 @@ async def on_settings_update(settings):
     os.environ["OPENAI_MODEL_NAME"] = config_list[0]['model']
     os.environ["OPENAI_API_BASE"] = config_list[0]['base_url']
     framework = settings["Framework"]
-    
+
     if "agents" in settings:
         with open("agents.yaml", "w") as f:
             f.write(settings["agents"])
     if "tools" in settings:
         with open("tools.py", "w") as f:
             f.write(settings["tools"])
-    
+
     print("Settings updated")
 
 @cl.on_chat_resume
@@ -192,16 +192,16 @@ async def run_agents(agent_file: str, framework: str):
     stdout_buffer = StringIO()
     with redirect_stdout(stdout_buffer):
         result = agents_generator.generate_crew_and_kickoff()
-        
+
     complete_output = stdout_buffer.getvalue()
 
     async with cl.Step(name="gpt4", type="llm", show_input=True) as step:
         step.input = ""
-        
+
         for line in stdout_buffer.getvalue().splitlines():
             print(line)
             await step.stream_token(line)
-            
+
         tool_res = await output(complete_output)
 
     yield result
@@ -243,9 +243,9 @@ async def main(message: cl.Message):
         await cl.sleep(2)
         agent_file = generator.generate()
         agents_generator = AgentsGenerator(
-            agent_file, 
-            framework, 
-            config_list, 
+            agent_file,
+            framework,
+            config_list,
             # agent_callback=agent,
             # task_callback=task
         )
@@ -253,7 +253,7 @@ async def main(message: cl.Message):
         stdout_buffer = StringIO()
         with redirect_stdout(stdout_buffer):
             result = agents_generator.generate_crew_and_kickoff()
-            
+
         complete_output = stdout_buffer.getvalue()
         tool_res = await output(complete_output)
         msg = cl.Message(content=result)
@@ -262,7 +262,7 @@ async def main(message: cl.Message):
     else:  # chat_profile == "Manual"
         agent_file = "agents.yaml"
         full_agent_file_path = os.path.abspath(agent_file)  # Get full path
-        full_tools_file_path = os.path.abspath("tools.py")  
+        full_tools_file_path = os.path.abspath("tools.py")
         if os.path.exists(full_agent_file_path):
             with open(full_agent_file_path, 'r') as f:
                 yaml_content = f.read()

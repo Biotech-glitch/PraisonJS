@@ -6,10 +6,10 @@ def build(setup_kwargs):
     try:
         # Get the directory of the current script
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        
+
         # Construct the path to post_install.py
         post_install_script = os.path.join(script_dir, 'post_install.py')
-        
+
         # Run the post_install.py script
         subprocess.check_call([sys.executable, post_install_script])
     except subprocess.CalledProcessError as e:

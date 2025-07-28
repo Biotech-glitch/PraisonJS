@@ -453,7 +453,7 @@ async def ui_run_praisonai(config, topic, tools_dict):
             # -------------------------------------------------------------
             role_tools = []
             task_tools = []  # Initialize task_tools outside the loop
-            
+
             for tool_name in details.get('tools', []):
                 if not tool_name or not tool_name.strip():
                     logger.warning("Skipping empty tool name.")
@@ -647,15 +647,15 @@ async def start_chat():
             "message_history",
             [{"role": "system", "content": "You are a helpful assistant."}],
         )
-        
+
         if not os.path.exists("tools.py"):
             with open("tools.py", "w") as f:
                 f.write("# Add your custom tools here\n")
-        
+
         if not os.path.exists("agents.yaml"):
             with open("agents.yaml", "w") as f:
                 f.write("# Add your custom agents here\n")
-        
+
         settings = await cl.ChatSettings(
             [
                 TextInput(id="Model", label="OpenAI - Model", initial=model_name),
@@ -680,7 +680,7 @@ async def start_chat():
                     yaml_content = f.read()
                 msg = cl.Message(content=yaml_content, language="yaml")
                 await msg.send()
-                
+
             full_tools_file_path = os.path.abspath("tools.py")
             if os.path.exists(full_tools_file_path):
                 with open(full_tools_file_path, 'r') as f:
@@ -704,7 +704,7 @@ async def start_chat():
                 ]
             ).send()
             cl.user_session.set("settings", settings)
-            
+
             res = await cl.AskActionMessage(
                 content="Pick an action!",
                 actions=actions,
@@ -739,7 +739,7 @@ async def main(message: cl.Message):
         logger.info(f"User message: {message.content}")
         msg = cl.Message(content="")
         await msg.stream_token(f"🔄 Processing your request: {message.content}...")
-        
+
         # Run PraisonAI
         result = await ui_run_praisonai(config, message.content, tools_dict)
 
@@ -760,7 +760,7 @@ async def on_settings_update(settings):
         config_list[0]['model'] = settings["Model"]
         config_list[0]['base_url'] = settings["BaseUrl"]
         config_list[0]['api_key'] = settings["ApiKey"]
-        
+
         for attempt in range(MAX_RETRIES):
             try:
                 await save_setting_with_retry("model_name", config_list[0]['model'])
@@ -772,21 +772,21 @@ async def on_settings_update(settings):
                     await asyncio.sleep(RETRY_DELAY)
                     continue
                 raise
-        
+
         os.environ["OPENAI_API_KEY"] = config_list[0]['api_key']
         os.environ["OPENAI_MODEL_NAME"] = config_list[0]['model']
         os.environ["OPENAI_API_BASE"] = config_list[0]['base_url']
         os.environ["MODEL_NAME"] = config_list[0]['model']
         framework = settings["Framework"]
         os.environ["FRAMEWORK"] = framework
-        
+
         if "agents" in settings:
             with open("agents.yaml", "w") as f:
                 f.write(settings["agents"])
         if "tools" in settings:
             with open("tools.py", "w") as f:
                 f.write(settings["tools"])
-        
+
         thread_id = cl.user_session.get("thread_id")
         if thread_id:
             for attempt in range(MAX_RETRIES):
@@ -809,7 +809,7 @@ async def on_settings_update(settings):
                         await asyncio.sleep(RETRY_DELAY)
                         continue
                     raise
-        
+
         logger.info("Settings updated successfully")
     except Exception as e:
         logger.error(f"Error updating settings: {str(e)}")

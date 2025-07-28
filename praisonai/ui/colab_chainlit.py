@@ -47,7 +47,7 @@ async def main(message: cl.Message):
 
         # Run PraisonAI with the message content as the topic
         result = await ui_run_praisonai(config, message.content, tools_dict)
-        
+
         # Send the final result
         await cl.Message(
             content=result,
@@ -78,4 +78,4 @@ if os.getenv("CHAINLIT_AUTH_SECRET"):
         if username == os.getenv("CHAINLIT_USERNAME", "admin") and \
            password == os.getenv("CHAINLIT_PASSWORD", "admin"):
             return cl.User(identifier=username, metadata={"role": "user"})
-        return None 
+        return None

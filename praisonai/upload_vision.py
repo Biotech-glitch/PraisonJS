@@ -62,7 +62,7 @@ class UploadVisionModel:
     def prepare_modelfile_content(self):
         """Prepare Ollama modelfile content using Llama 3.2 vision template."""
         output_model = self.config["hf_model_name"]
-        
+
         # Using Llama 3.2 vision template format
         template = """{{- range $index, $_ := .Messages }}<|start_header_id|>{{ .Role }}<|end_header_id|>
 
@@ -72,7 +72,7 @@ class UploadVisionModel:
 
 {{ end }}
 {{- end }}"""
-        
+
         # Assemble the modelfile content with Llama 3.2 vision parameters
         modelfile = f"FROM {output_model}\n"
         modelfile += "TEMPLATE \"""" + template + "\"""\n"
@@ -86,20 +86,20 @@ class UploadVisionModel:
         modelfile_content = self.prepare_modelfile_content()
         with open("Modelfile", "w") as file:
             file.write(modelfile_content)
-        
+
         print("DEBUG: Starting Ollama server...")
         subprocess.run(["ollama", "serve"])
-        
+
         print("DEBUG: Creating Ollama model...")
         subprocess.run([
-            "ollama", "create", 
-            f"{self.config['ollama_model']}:{self.config['model_parameters']}", 
+            "ollama", "create",
+            f"{self.config['ollama_model']}:{self.config['model_parameters']}",
             "-f", "Modelfile"
         ])
-        
+
         print("DEBUG: Pushing model to Ollama...")
         subprocess.run([
-            "ollama", "push", 
+            "ollama", "push",
             f"{self.config['ollama_model']}:{self.config['model_parameters']}"
         ])
         print("DEBUG: Model pushed to Ollama successfully.")
@@ -111,13 +111,13 @@ class UploadVisionModel:
             target (str): One of 'all', 'huggingface', 'huggingface_gguf', or 'ollama'
         """
         self.prepare_model()
-        
+
         if target in ["all", "huggingface"]:
             self.save_model_merged()
-        
+
         if target in ["all", "huggingface_gguf"]:
             self.push_model_gguf()
-            
+
         if target in ["all", "ollama"]:
             self.create_and_push_ollama_model()
 
@@ -126,7 +126,7 @@ def main():
     parser = argparse.ArgumentParser(description="Upload Vision Model to Various Platforms")
     parser.add_argument("--config", default="config.yaml", help="Path to configuration file")
     parser.add_argument(
-        "--target", 
+        "--target",
         choices=["all", "huggingface", "huggingface_gguf", "ollama"],
         default="all",
         help="Target platform to upload to"

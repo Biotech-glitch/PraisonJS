@@ -21,11 +21,11 @@ def ensure_directories():
 
     os.makedirs(chainlit_root, exist_ok=True)
     os.makedirs(os.path.join(chainlit_root, ".files"), exist_ok=True)
-    
+
     # Copy public folder and chainlit.md if they don't exist
     public_folder = os.path.join(os.path.dirname(__file__), "public")
     config_folder = os.path.join(os.path.dirname(__file__), "config")
-    
+
     # Copy public folder
     if not os.path.exists(os.path.join(chainlit_root, "public")):
         if os.path.exists(public_folder):
@@ -33,11 +33,11 @@ def ensure_directories():
             logging.info("Public folder copied successfully!")
         else:
             logging.info("Public folder not found in the package.")
-    
+
     # Copy all files from config folder to root if translations doesn't exist
     if not os.path.exists(os.path.join(chainlit_root, "translations")):
         os.makedirs(os.path.join(chainlit_root, "translations"), exist_ok=True)
-        
+
         if os.path.exists(config_folder):
             for item in os.listdir(config_folder):
                 src_path = os.path.join(config_folder, item)
@@ -60,14 +60,14 @@ class DatabaseManager(SQLAlchemyDataLayer):
     def __init__(self):
         # Check FORCE_SQLITE flag to bypass external database detection
         self.database_url = get_database_url_with_sqlite_override()
-        
+
         if self.database_url:
             self.conninfo = self.database_url
         else:
             chainlit_root = os.environ["CHAINLIT_APP_ROOT"]  # Now using CHAINLIT_APP_ROOT
             self.db_path = os.path.join(chainlit_root, "database.sqlite")
             self.conninfo = f"sqlite+aiosqlite:///{self.db_path}"
-        
+
         # Initialize SQLAlchemyDataLayer with the connection info
         super().__init__(conninfo=self.conninfo)
 

@@ -56,7 +56,7 @@ if CREWAI_AVAILABLE or AUTOGEN_AVAILABLE or PRAISONAI_AVAILABLE:
         from praisonai_tools import (
             CodeDocsSearchTool, CSVSearchTool, DirectorySearchTool, DOCXSearchTool, DirectoryReadTool,
             FileReadTool, TXTSearchTool, JSONSearchTool, MDXSearchTool, PDFSearchTool, RagTool,
-            ScrapeElementFromWebsiteTool, ScrapeWebsiteTool, WebsiteSearchTool, XMLSearchTool, 
+            ScrapeElementFromWebsiteTool, ScrapeWebsiteTool, WebsiteSearchTool, XMLSearchTool,
             YoutubeChannelSearchTool, YoutubeVideoSearchTool, BaseTool
         )
         PRAISONAI_TOOLS_AVAILABLE = True
@@ -115,11 +115,11 @@ class AgentsGenerator:
         self.log_level = log_level or logging.getLogger().getEffectiveLevel()
         if self.log_level == logging.NOTSET:
             self.log_level = os.environ.get('LOGLEVEL', 'INFO').upper()
-        
+
         logging.basicConfig(level=self.log_level, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(self.log_level)
-        
+
         # Validate framework availability
         if framework == "crewai" and not CREWAI_AVAILABLE:
             raise ImportError("CrewAI is not installed. Please install it with 'pip install praisonai[crewai]'")
@@ -157,19 +157,19 @@ class AgentsGenerator:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return {name: obj for name, obj in inspect.getmembers(module, self.is_function_or_decorated)}
-    
+
     def load_tools_from_module_class(self, module_path):
         """
-        Loads tools from a specified module path containing classes that inherit from BaseTool 
+        Loads tools from a specified module path containing classes that inherit from BaseTool
         or are part of langchain_community.tools package.
         """
         spec = importlib.util.spec_from_file_location("tools_module", module_path)
         module = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(module)
-            return {name: obj() for name, obj in inspect.getmembers(module, 
+            return {name: obj() for name, obj in inspect.getmembers(module,
                 lambda x: inspect.isclass(x) and (
-                    x.__module__.startswith('langchain_community.tools') or 
+                    x.__module__.startswith('langchain_community.tools') or
                     (PRAISONAI_TOOLS_AVAILABLE and issubclass(x, BaseTool))
                 ) and x is not BaseTool)}
         except ImportError as e:
@@ -222,8 +222,8 @@ class AgentsGenerator:
 
             # Get all module attributes except private ones and classes
             for name, obj in inspect.getmembers(module):
-                if (not name.startswith('_') and 
-                    callable(obj) and 
+                if (not name.startswith('_') and
+                    callable(obj) and
                     not inspect.isclass(obj)):
                     # Add the function to global namespace
                     globals()[name] = obj
@@ -233,12 +233,12 @@ class AgentsGenerator:
 
             self.logger.debug(f"Loaded {len(tools_list)} tool functions from tools.py")
             self.logger.debug(f"Tools list: {tools_list}")
-            
+
         except FileNotFoundError:
             self.logger.debug("tools.py not found in current directory")
         except Exception as e:
             self.logger.warning(f"Error loading tools from tools.py: {e}")
-            
+
         return tools_list
 
     def generate_crew_and_kickoff(self):
@@ -272,7 +272,7 @@ class AgentsGenerator:
 
         topic = config['topic']
         tools_dict = {}
-        
+
         # Only try to use praisonai_tools if it's available and needed
         if PRAISONAI_TOOLS_AVAILABLE and (CREWAI_AVAILABLE or AUTOGEN_AVAILABLE or PRAISONAI_AVAILABLE):
             tools_dict = {
@@ -294,7 +294,7 @@ class AgentsGenerator:
                 'YoutubeChannelSearchTool': YoutubeChannelSearchTool(),
                 'YoutubeVideoSearchTool': YoutubeVideoSearchTool(),
             }
-            
+
             # Add tools from class names
             for tool_class in self.tools:
                 if isinstance(tool_class, type) and issubclass(tool_class, BaseTool):
@@ -305,7 +305,7 @@ class AgentsGenerator:
         root_directory = os.getcwd()
         tools_py_path = os.path.join(root_directory, 'tools.py')
         tools_dir_path = Path(root_directory) / 'tools'
-        
+
         if os.path.isfile(tools_py_path):
             tools_dict.update(self.load_tools_from_module_class(tools_py_path))
             self.logger.debug("tools.py exists in the root directory. Loading tools.py and skipping tools folder.")
@@ -337,17 +337,17 @@ class AgentsGenerator:
     def _run_autogen(self, config, topic, tools_dict):
         """
         Run agents using the AutoGen framework.
-        
+
         Args:
             config (dict): Configuration dictionary
             topic (str): The topic to process
             tools_dict (dict): Dictionary of available tools
-            
+
         Returns:
             str: Result of the agent interactions
         """
         llm_config = {"config_list": self.config_list}
-        
+
         # Set up user proxy agent
         user_proxy = autogen.UserProxyAgent(
             name="User",
@@ -358,23 +358,23 @@ class AgentsGenerator:
                 "use_docker": False,
             }
         )
-        
+
         agents = {}
         tasks = []
-        
+
         # Create agents and tasks from config
         for role, details in config['roles'].items():
             agent_name = details['role'].format(topic=topic).replace("{topic}", topic)
             agent_goal = details['goal'].format(topic=topic)
-            
+
             # Create AutoGen assistant agent
             agents[role] = autogen.AssistantAgent(
                 name=agent_name,
                 llm_config=llm_config,
-                system_message=details['backstory'].format(topic=topic) + 
+                system_message=details['backstory'].format(topic=topic) +
                              ". Must Reply \"TERMINATE\" in the end when everything is done.",
             )
-            
+
             # Add tools to agent if specified
             for tool in details.get('tools', []):
                 if tool in tools_dict:
@@ -390,7 +390,7 @@ class AgentsGenerator:
             for task_name, task_details in details.get('tasks', {}).items():
                 description_filled = task_details['description'].format(topic=topic)
                 expected_output_filled = task_details['expected_output'].format(topic=topic)
-                
+
                 chat_task = {
                     "recipient": agents[role],
                     "message": description_filled,
@@ -401,21 +401,21 @@ class AgentsGenerator:
         # Execute tasks
         response = user_proxy.initiate_chats(tasks)
         result = "### Output ###\n" + response[-1].summary if hasattr(response[-1], 'summary') else ""
-        
+
         if AGENTOPS_AVAILABLE:
             agentops.end_session("Success")
-            
+
         return result
 
     def _run_crewai(self, config, topic, tools_dict):
         """
         Run agents using the CrewAI framework.
-        
+
         Args:
             config (dict): Configuration dictionary
             topic (str): The topic to process
             tools_dict (dict): Dictionary of available tools
-            
+
         Returns:
             str: Result of the agent interactions
         """
@@ -428,11 +428,11 @@ class AgentsGenerator:
             role_filled = details['role'].format(topic=topic)
             goal_filled = details['goal'].format(topic=topic)
             backstory_filled = details['backstory'].format(topic=topic)
-            
+
             # Get agent tools
-            agent_tools = [tools_dict[tool] for tool in details.get('tools', []) 
+            agent_tools = [tools_dict[tool] for tool in details.get('tools', [])
                          if tool in tools_dict]
-            
+
             # Configure LLM
             llm_model = details.get('llm')
             if llm_model:
@@ -479,7 +479,7 @@ class AgentsGenerator:
                 prompt_template=details.get('prompt_template') or None,
                 response_template=details.get('response_template') or None,
             )
-            
+
             # Set agent callback if provided
             if self.agent_callback:
                 agent.step_callback = self.agent_callback
@@ -506,7 +506,7 @@ class AgentsGenerator:
                     human_input=task_details.get('human_input', False),
                     create_directory=task_details.get('create_directory', False)
                 )
-                
+
                 # Set task callback if provided
                 if self.task_callback:
                     task.callback = self.task_callback
@@ -518,7 +518,7 @@ class AgentsGenerator:
         for role, details in config['roles'].items():
             for task_name, task_details in details.get('tasks', {}).items():
                 task = tasks_dict[task_name]
-                context_tasks = [tasks_dict[ctx] for ctx in task_details.get('context', []) 
+                context_tasks = [tasks_dict[ctx] for ctx in task_details.get('context', [])
                                if ctx in tasks_dict]
                 task.context = context_tasks
 
@@ -528,17 +528,17 @@ class AgentsGenerator:
             tasks=tasks,
             verbose=True
         )
-        
+
         self.logger.debug("Final Crew Configuration:")
         self.logger.debug(f"Agents: {crew.agents}")
         self.logger.debug(f"Tasks: {crew.tasks}")
 
         response = crew.kickoff()
         result = f"### Task Output ###\n{response}"
-        
+
         if AGENTOPS_AVAILABLE:
             agentops.end_session("Success")
-            
+
         return result
 
     def _run_praisonai(self, config, topic, tools_dict):
@@ -558,7 +558,7 @@ class AgentsGenerator:
             role_filled = details['role'].format(topic=topic)
             goal_filled = details['goal'].format(topic=topic)
             backstory_filled = details['backstory'].format(topic=topic)
-            
+
             # Pass all loaded tools to the agent
             agent = PraisonAgent(
                 name=role_filled,
@@ -581,7 +581,7 @@ class AgentsGenerator:
                 min_reflect=details.get('min_reflect', 1),
                 max_reflect=details.get('max_reflect', 3),
             )
-            
+
             if self.agent_callback:
                 agent.step_callback = self.agent_callback
 
@@ -609,7 +609,7 @@ class AgentsGenerator:
                 )
 
                 self.logger.debug(f"Created task {task_name} with tools: {task.tools}")
-                
+
                 if self.task_callback:
                     task.callback = self.task_callback
 
@@ -620,7 +620,7 @@ class AgentsGenerator:
         for role, details in config['roles'].items():
             for task_name, task_details in details.get('tasks', {}).items():
                 task = tasks_dict[task_name]
-                context_tasks = [tasks_dict[ctx] for ctx in task_details.get('context', []) 
+                context_tasks = [tasks_dict[ctx] for ctx in task_details.get('context', [])
                             if ctx in tasks_dict]
                 task.context = context_tasks
 
@@ -651,8 +651,8 @@ class AgentsGenerator:
         response = agents.start()
         self.logger.debug(f"Result: {response}")
         result = ""
-        
+
         if AGENTOPS_AVAILABLE:
             agentops.end_session("Success")
-            
+
         return result

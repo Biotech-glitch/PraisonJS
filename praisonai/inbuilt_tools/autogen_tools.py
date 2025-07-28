@@ -19,30 +19,30 @@ except ImportError:
 def create_autogen_tool_function(tool_class):
     """
     Create a function that wraps a tool for autogen.
-    
+
     Args:
         tool_class: The tool class to wrap
-        
+
     Returns:
         function: A function that can be used with autogen agents
     """
     if not TOOLS_AVAILABLE:
         return None
-        
+
     def tool_function(assistant, user_proxy):
         """
         Wrapper function for the tool that works with autogen.
-        
+
         Args:
             assistant: The autogen assistant agent
             user_proxy: The autogen user proxy agent
         """
         tool_instance = tool_class()
-        
+
         # Get the tool's run method signature
         sig = inspect.signature(tool_instance.run)
         param_names = list(sig.parameters.keys())
-        
+
         def wrapped_function(*args, **kwargs):
             try:
                 # Map positional arguments to named parameters
@@ -55,7 +55,7 @@ def create_autogen_tool_function(tool_class):
             except Exception as e:
                 logging.error(f"Error running {tool_class.__name__}: {str(e)}")
                 return f"Error: {str(e)}"
-        
+
         # Add the function to the assistant's function map
         assistant.register_function(
             function_map={
@@ -68,7 +68,7 @@ def create_autogen_tool_function(tool_class):
             },
             description=tool_instance.__doc__ or f"Use {tool_class.__name__} to perform operations"
         )
-    
+
     return tool_function if TOOLS_AVAILABLE else None
 
 # Only create tool functions if praisonai_tools is available
