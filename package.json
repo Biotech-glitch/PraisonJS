@@ -1,4 +1,12 @@
 {
+  "name": "praisonjs",
+  "version": "1.0.0",
+  "description": "PraisonAI JavaScript components and documentation",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
   "devDependencies": {
     "eslint": "^8.57.1",
     "eslint-plugin-mdx": "^3.1.5",
